@@ -19,7 +19,7 @@
 
 using namespace Tufao;
 
-#define USE_HTTPS 0
+#define USE_HTTPS 1
 
 class MyServer : public QObject
 {
