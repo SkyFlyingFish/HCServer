@@ -19,7 +19,7 @@
 
 using namespace Tufao;
 
-#define USE_HTTPS 1
+#define USE_HTTPS 0
 
 class MyServer : public QObject
 {
@@ -34,6 +34,11 @@ public:
 #endif
     void handleRequestReady(HttpServerRequest& request, HttpServerResponse&);
     QJsonObject handle(QJsonObject reqObj);
+    QJsonObject handleLogin(QJsonObject obj);
+    QJsonObject handleReg(QJsonObject obj);
+
+    static ssize_t curlCallback(char* ptr, int m, int n, void* arg);
+    QString md5(QString value);
 signals:
 
 public slots:

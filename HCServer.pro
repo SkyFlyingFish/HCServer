@@ -12,6 +12,12 @@ CONFIG += C++11
 RESOURCES += \
     res.qrc
 
-#INCLUDEPATH += /usr/local/include
+mac{
+INCLUDEPATH += /usr/local/include
+LIBS += -L/usr/local/lib -ltufao1
+}
+linux{
+LIBS += -ltufao1
+}
 
-LIBS += -L/usr/lib -ltufao1
+LIBS += -lcurl

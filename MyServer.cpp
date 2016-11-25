@@ -1,5 +1,7 @@
 #include "MyServer.h"
 #include "Def.h"
+#include <curl/curl.h>
+#include <QCryptographicHash>
 
 MyServer::MyServer(QObject *parent) : QObject(parent)
 {
@@ -10,7 +12,7 @@ MyServer::MyServer(QObject *parent) : QObject(parent)
     QFile key(":/key.pem");
     key.open(QIODevice::ReadOnly);
     _server->setPrivateKey(QSslKey(&key, QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey,
-                                 "123456"));
+                                   "123456"));
 
     QFile cert(":/cert.pem");
     cert.open(QIODevice::ReadOnly);
@@ -52,11 +54,84 @@ void MyServer::handleRequestReady(HttpServerRequest &request, HttpServerResponse
     response.end(respData);
 }
 
+/*
+    cmd = login, cmd = reg
+*/
 QJsonObject MyServer::handle(QJsonObject reqObj)
+{
+    QString cmd = reqObj.value(HC_CMD).toString();
+    QJsonObject resp;
+    if(cmd == "login")
+    {
+        resp = handleLogin(reqObj);
+    }
+    if(cmd == "reg")
+    {
+        resp = handleReg(reqObj);
+    }
+
+    return resp;
+}
+
+QJsonObject MyServer::handleLogin(QJsonObject obj)
 {
     QJsonObject resp;
     resp.insert(HC_RESULT, HC_OK);
     return resp;
+}
+
+QJsonObject MyServer::handleReg(QJsonObject obj)
+{
+    QString username = obj.value(HC_USERNAME).toString();
+    QString password = obj.value(HC_PASSWORD).toString();
+    password = md5(password);
+    QString mobile = obj.value(HC_MOBILE).toString();
+    QString email = obj.value(HC_EMAIL).toString();
+    QString id = obj.value(HC_ID).toString();
+
+    QJsonObject insertObj;
+
+    insertObj.insert(HC_CMD, HC_INSERT);
+    insertObj.insert(HC_TYPE, HC_PERMANENT);
+    insertObj.insert(HC_OBJECT, HC_USER_TABLE);
+    QJsonArray arr;
+    arr << username << password << mobile << email << id;
+    insertObj.insert(HC_DATA, arr);
+
+    /* 向dataServer发送插入数据请求 */
+    QByteArray insertBuf = QJsonDocument(insertObj).toJson();
+
+    CURL* curl = curl_easy_init();
+    curl_easy_setopt(curl, CURLOPT_URL, HC_URL_DATA);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, insertBuf.data());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, insertBuf.size());
+
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlCallback);
+    QByteArray respBuffer;
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &respBuffer);
+
+    curl_easy_perform(curl);
+
+    QJsonObject insertRespJson = QJsonDocument::fromJson(respBuffer).object();
+  //  insertRespJson.value(HC_RESULT).toString();
+
+    return insertRespJson;
+}
+
+ssize_t MyServer::curlCallback(char *ptr, int m, int n, void *arg)
+{
+    QByteArray& respBuffer = *(QByteArray*)arg;
+    respBuffer.append(ptr, m*n);
+    return m*n;
+}
+
+QString MyServer::md5(QString value)
+{
+    /* 128/8 = 16 */
+    /* 0x1234F6A5 "1234F6A5" */
+    QByteArray bb = QCryptographicHash::hash ( value.toUtf8(), QCryptographicHash::Md5 );
+    // 把二进制转换成字符串，32个字节
+    return bb.toHex();
 }
 
 void MyServer::slotRequestReady(HttpServerRequest &request, HttpServerResponse& response)
