@@ -6,12 +6,17 @@
 #define HC_DEF_H
 
 #define HC_REG "reg"
+#define HC_QUERY "query"
+#define HC_COUNT "count"
+#define HC_SESSION "session"
 #define HC_MOBILE "mobile"
 #define HC_EMAIL "email"
 #define HC_ID "id"
 #define HC_INSERT "insert"
 #define HC_TYPE "type"
+#define HC_LOGINTYPE "logintype"
 #define HC_PERMANENT "p"
+#define HC_TEMP "t"
 #define HC_OBJECT "obj"
 #define HC_USER_TABLE "tuser"
 #define HC_DATA "data"

@@ -39,6 +39,8 @@ public:
 
     static ssize_t curlCallback(char* ptr, int m, int n, void* arg);
     QString md5(QString value);
+
+    QJsonObject execute(QJsonObject );
 signals:
 
 public slots:
