@@ -36,6 +36,9 @@
 #define HC_LAT "lat"
 #define HC_UPDATE "update"
 #define HC_POSITION "position"
+#define HC_START_ORDER "startorder"
+#define HC_START "start"
+#define HC_END "end"
 
 
 #endif //HC_DEF_H

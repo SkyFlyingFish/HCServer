@@ -66,11 +66,15 @@ QJsonObject MyServer::handle(QJsonObject reqObj)
     {
         resp = handleLocationChange(reqObj);
     }
-    if(cmd == HC_LOGIN)
+    else if(cmd == HC_START_ORDER)
+    {
+        // 找最近的司机
+    }
+    else if(cmd == HC_LOGIN)
     {
         resp = handleLogin(reqObj);
     }
-    if(cmd == HC_REG)
+    else if(cmd == HC_REG)
     {
         resp = handleReg(reqObj);
     }
@@ -78,6 +82,13 @@ QJsonObject MyServer::handle(QJsonObject reqObj)
 
     return resp;
 }
+
+// 1 0 1 1 1 0 0 0 1 1 纬度
+// 1 1 0 1 0 0 1 0 1 1 经度
+// 11011 01110 00010 01111 20位的2进制值
+// 11011 01110 00010 01111 (0~31)
+// 27    14    2     15
+// v     f     2     g  "vf2g"  "vf2h"
 
 /* 查询数据 get/query 条件 */
 QJsonObject MyServer::handleLogin(QJsonObject obj)
