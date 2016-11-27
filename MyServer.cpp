@@ -6,7 +6,6 @@
 
 MyServer::MyServer(QObject *parent) : QObject(parent)
 {
-
 #if USE_HTTPS
     _server = new HttpsServer;
     // 设置CA证书
@@ -62,6 +61,11 @@ QJsonObject MyServer::handle(QJsonObject reqObj)
 {
     QString cmd = reqObj.value(HC_CMD).toString();
     QJsonObject resp;
+
+    if(cmd == HC_LOCATION_CHANGE)
+    {
+        resp = handleLocationChange(reqObj);
+    }
     if(cmd == HC_LOGIN)
     {
         resp = handleLogin(reqObj);
@@ -70,6 +74,7 @@ QJsonObject MyServer::handle(QJsonObject reqObj)
     {
         resp = handleReg(reqObj);
     }
+
 
     return resp;
 }
@@ -91,29 +96,7 @@ QJsonObject MyServer::handleLogin(QJsonObject obj)
     queryObj.insert(HC_OBJECT, HC_USER_TABLE);
     queryObj.insert(HC_USERNAME, username);
 
-    // 将报文发送给数据服务器
-    /*
-     * /*
-        {
-            result: ok,
-            count: 1,
-            data: [
-                {
-                    username: xxx,
-                    password: yyy,
-                    email: zzz,
-                    id: yyy,
-                    mobile: yyy
-                },
-                {
 
-                }
-
-            ]
-        }
-
-     * }
-     */
     QJsonObject queryResult = execute(queryObj);
     if(queryResult.value(HC_RESULT).toString() == HC_OK)
     {
@@ -124,6 +107,7 @@ QJsonObject MyServer::handleLogin(QJsonObject obj)
             if(data.value(HC_PASSWORD).toString() == password)
             {
                 QString uuid = QUuid::createUuid().toString();
+                resp.insert(HC_SESSION, uuid);
 
                 // 产生这次登陆session，并保存在数据服务器
                 // 要求数据服务器产生session
@@ -185,6 +169,25 @@ QJsonObject MyServer::handleReg(QJsonObject obj)
 
     /* 向dataServer发送插入数据请求 */
     return execute(insertObj);
+}
+
+QJsonObject MyServer::handleLocationChange(QJsonObject obj)
+{
+    // insert query update(modify)
+    // locationchange
+    obj.insert(HC_CMD, HC_UPDATE); // {cmd: locationchage}
+    obj.insert(HC_OBJECT, HC_POSITION);
+
+    /*
+        {
+            cmd: update,
+            object: position,
+            session: {xxxx-xxxxx-xxxxx-xxxxx},
+            lng: 118.19098111,
+            lat: 39.11882711
+        }
+    */
+    return execute(obj);
 }
 
 ssize_t MyServer::curlCallback(char *ptr, int m, int n, void *arg)

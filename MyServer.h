@@ -36,6 +36,7 @@ public:
     QJsonObject handle(QJsonObject reqObj);
     QJsonObject handleLogin(QJsonObject obj);
     QJsonObject handleReg(QJsonObject obj);
+    QJsonObject handleLocationChange(QJsonObject obj);
 
     static ssize_t curlCallback(char* ptr, int m, int n, void* arg);
     QString md5(QString value);
