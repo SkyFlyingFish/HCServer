@@ -68,7 +68,22 @@ QJsonObject MyServer::handle(QJsonObject reqObj)
     }
     else if(cmd == HC_START_ORDER)
     {
-        // 找最近的司机
+        // 1. 向数据服务器发送请求，创建一个订单（订单保存在MySQL中）
+        resp = handleStartOrder(reqObj);
+        /*
+            订单表结构：
+            乘客用户名（请求订单时直接写入）
+            司机用户名（由服务器安排司机，写入）
+            订单号
+            lng1
+            lat1
+            lng2
+            lat2
+            多少钱
+            上车时间戳
+            下车时间戳
+        */
+        //
     }
     else if(cmd == HC_LOGIN)
     {
@@ -88,7 +103,7 @@ QJsonObject MyServer::handle(QJsonObject reqObj)
 // 11011 01110 00010 01111 20位的2进制值
 // 11011 01110 00010 01111 (0~31)
 // 27    14    2     15
-// v     f     2     g  "vf2g"  "vf2h"
+// v     f     2     g  "vf2g"   "vf2h"
 
 /* 查询数据 get/query 条件 */
 QJsonObject MyServer::handleLogin(QJsonObject obj)
@@ -199,6 +214,137 @@ QJsonObject MyServer::handleLocationChange(QJsonObject obj)
         }
     */
     return execute(obj);
+}
+
+QJsonObject MyServer::handleStartOrder(QJsonObject obj)
+{
+    // 1. 向数据服务器发送请求，创建一个订单（订单保存在MySQL中）
+#if 0
+    QString username = obj.value(HC_USERNAME).toString();
+    QString password = obj.value(HC_PASSWORD).toString();
+    password = md5(password);
+    QString mobile = obj.value(HC_MOBILE).toString();
+    QString email = obj.value(HC_EMAIL).toString();
+    QString id = obj.value(HC_ID).toString();
+
+    QJsonObject insertObj;
+
+    insertObj.insert(HC_CMD, HC_INSERT);
+    insertObj.insert(HC_TYPE, HC_PERMANENT);
+    insertObj.insert(HC_OBJECT, HC_USER_TABLE);
+    QJsonArray arr;
+    arr << username << password << mobile << email << id;
+    insertObj.insert(HC_DATA, arr);
+#endif
+
+    QJsonObject ret;
+    ret.insert(HC_RESULT, HC_ERR);
+
+    QString pid, did; // passengerID, driverID
+
+    QString session = obj.value(HC_SESSION).toString();
+    pid = getUserID(session);
+    if(pid.length() == 0)
+    {
+        // session已经过期了
+        ret.insert(HC_REASON, "get userid error");
+        return ret;
+    }
+
+    QString lngs = obj.value(HC_START).toObject().value(HC_LNG).toString();
+    QString lats = obj.value(HC_START).toObject().value(HC_LAT).toString();
+    QString lnge = obj.value(HC_END).toObject().value(HC_LNG).toString();
+    QString late = obj.value(HC_END).toObject().value(HC_LAT).toString();
+
+    did = getNearbyDriverID(lngs, lats);
+    if(did.length() == 0)
+    {
+        // 附近没有司机
+        ret.insert(HC_REASON, "no driver neerby");
+        return ret;
+    }
+
+    QJsonObject insertObj;
+    insertObj.insert(HC_CMD, HC_INSERT);
+    insertObj.insert(HC_TYPE, HC_PERMANENT);
+    insertObj.insert(HC_OBJECT, HC_ORDER);
+    QJsonArray arr;
+
+    arr << pid << did << QUuid::createUuid().toString() << lngs << lats << lnge << late;
+    insertObj.insert(HC_DATA, arr);
+
+    return execute(insertObj);
+
+    /*
+        订单表结构：
+        乘客用户名（请求订单时直接写入）
+        司机用户名（由服务器安排司机，写入）
+        订单号
+        lng1
+        lat1
+        lng2
+        lat2
+        多少钱
+        上车时间戳
+        下车时间戳
+    */
+}
+
+QString MyServer::getUserID(QString sessionid)
+{
+    /*
+        insert, update, get
+
+        {
+            cmd: get
+            object: userid
+            session: sessionid
+        }
+
+        {
+            result: ok
+            userid: xxxxxxx
+        }
+
+        {
+            result: err,
+            reason: xxxxx
+        }
+    */
+
+    QJsonObject req;
+    req.insert(HC_CMD, HC_GET);
+    req.insert(HC_OBJECT, HC_USERID);
+    req.insert(HC_SESSION, sessionid);
+
+    QJsonObject resp = execute(req);
+    if(resp.value(HC_RESULT).toString() == HC_OK)
+        return resp.value(HC_USERID).toString();
+
+    return QString();
+}
+
+QString MyServer::getNearbyDriverID(QString lng, QString lat)
+{
+    QJsonObject req;
+    req.insert(HC_CMD, HC_GET);
+    req.insert(HC_OBJECT, HC_NEARBY_DRIVER);
+    req.insert(HC_LNG, lng);
+    req.insert(HC_LAT, lat);
+
+    QJsonObject resp = execute(req);
+    /*
+        {
+            result: ok
+            userid: xxxxxxx
+        }
+    */
+    if(resp.value(HC_RESULT).toString() == HC_OK)
+    {
+        return resp.value(HC_USERID).toString();
+    }
+
+    return QString();
 }
 
 ssize_t MyServer::curlCallback(char *ptr, int m, int n, void *arg)

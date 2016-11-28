@@ -37,6 +37,10 @@ public:
     QJsonObject handleLogin(QJsonObject obj);
     QJsonObject handleReg(QJsonObject obj);
     QJsonObject handleLocationChange(QJsonObject obj);
+    QJsonObject handleStartOrder(QJsonObject obj);
+
+    QString getUserID(QString sessionid);
+    QString getNearbyDriverID(QString lng, QString lat);
 
     static ssize_t curlCallback(char* ptr, int m, int n, void* arg);
     QString md5(QString value);
